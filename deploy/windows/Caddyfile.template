@@ -1,0 +1,28 @@
+{
+	admin off
+}
+
+__DOMAIN__ {
+	root * __DIST_PATH__
+	encode zstd gzip
+
+	# Static single-page app routing.
+	try_files {path} /index.html
+	file_server
+
+	# Long cache for versioned assets, no-cache for HTML.
+	@static path *.css *.js *.mjs *.png *.jpg *.jpeg *.gif *.svg *.ico *.webp *.woff *.woff2
+	header @static Cache-Control "public, max-age=31536000, immutable"
+	@html path / *.html
+	header @html Cache-Control "no-cache"
+
+	# Basic hardening headers for a static site.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+	}
+}

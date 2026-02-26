@@ -1,16 +1,81 @@
-# React + Vite
+# Web App (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Small React site deployed on Vercel.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19
+- Vite 7
+- Vercel (production hosting)
 
-## React Compiler
+## Live URLs
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Primary alias: `https://web-lake-six-70.vercel.app`
+- Deployment URL (may change per deploy): `https://web-8mc7udkjp-yaya0631s-projects.vercel.app`
 
-## Expanding the ESLint configuration
+## Project Files You Will Usually Edit
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `src/App.jsx` for page content
+- `src/App.css` for page styling
+- `src/index.css` for global styling
+
+## Run Locally
+
+PowerShell-safe commands:
+
+```powershell
+& 'C:\Program Files\nodejs\npm.cmd' install
+& 'C:\Program Files\nodejs\npm.cmd' run dev
+```
+
+Then open the local URL shown by Vite (usually `http://localhost:5173`).
+
+## Build Check Before Deploy
+
+```powershell
+& 'C:\Program Files\nodejs\npm.cmd' run build
+```
+
+This creates production files in `dist/`.
+
+## Redeploy After Changes (No Router Setup Needed)
+
+This app is hosted in the cloud, so no router port-forwarding is required.
+
+1. Save your changes.
+2. Commit and push to GitHub:
+
+```powershell
+& 'C:\Program Files\Git\cmd\git.exe' add .
+& 'C:\Program Files\Git\cmd\git.exe' commit -m "update site"
+& 'C:\Program Files\Git\cmd\git.exe' push origin main
+```
+
+3. Trigger a production deploy:
+
+```powershell
+& 'C:\Program Files\nodejs\npx.cmd' vercel --prod --yes
+```
+
+4. Open the URL returned by the command and verify the update.
+
+## First-Time Vercel Login (Only If Needed)
+
+```powershell
+& 'C:\Program Files\nodejs\npx.cmd' vercel login
+```
+
+## Optional: Connect a Custom Domain
+
+1. In Vercel: Project -> Settings -> Domains -> Add your domain.
+2. In your domain/DNS provider: add the DNS records Vercel shows.
+3. Wait for DNS propagation.
+
+## Troubleshooting
+
+- If `npm` or `npx` is blocked in PowerShell, use `npm.cmd` and `npx.cmd` commands as shown above.
+- If deployment fails, run:
+
+```powershell
+& 'C:\Program Files\nodejs\npx.cmd' vercel logs
+```

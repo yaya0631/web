@@ -29,13 +29,13 @@ export default function PaiementModal({ dossier, onUpdate }) {
     setMode(MODES[0])
   }, [dossier?.id])
 
-  if (!dossier) return null
-
-  const history = useMemo(() => normalizePayments(dossier.paiements), [dossier.paiements])
-  const totalPaid = sumPayments(history, dossier.encaisse)
-  const total = Number(dossier.montant || 0)
+  const history = useMemo(() => normalizePayments(dossier?.paiements), [dossier?.paiements])
+  const totalPaid = sumPayments(history, dossier?.encaisse)
+  const total = Number(dossier?.montant || 0)
   const remaining = Math.max(total - totalPaid, 0)
   const pct = total > 0 ? Math.min(100, (totalPaid / total) * 100) : 0
+
+  if (!dossier) return null
 
   const handleAdd = async () => {
     const parsed = parseFloat(amount)

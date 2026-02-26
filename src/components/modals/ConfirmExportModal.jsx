@@ -144,21 +144,21 @@ export function ExportModal({ rows, onImportDone }) {
     <div className="overlay" id="m-export">
       <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
         <div className="mh">
-          <div className="mh-title">Import / Export compatibilite desktop</div>
+          <div className="mh-title">Import / Export compatibilite version desktop</div>
           <button className="mh-close" onClick={() => closeModal('m-export')}>x</button>
         </div>
         <div className="mb">
           <div className="export-grid">
             <div className="exp-card" onClick={exportJson}>
-              <div className="exp-title">JSON Sync</div>
-              <div className="exp-desc">Export complet web + bundle desktop.</div>
+              <div className="exp-title">Synchronisation JSON</div>
+              <div className="exp-desc">Export complet web avec bundle desktop.</div>
             </div>
             <div className="exp-card" onClick={exportDesktopCsvFile}>
               <div className="exp-title">CSV Desktop</div>
               <div className="exp-desc">Format CSV identique a GeoMan desktop.</div>
             </div>
             <div className="exp-card" onClick={exportDesktopDbFile}>
-              <div className="exp-title">Backup DB Desktop</div>
+              <div className="exp-title">Sauvegarde DB Desktop</div>
               <div className="exp-desc">Genere un fichier SQLite .db compatible desktop.</div>
             </div>
             <label className="exp-card" style={{ cursor: 'pointer' }}>

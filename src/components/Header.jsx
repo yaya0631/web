@@ -30,7 +30,7 @@ export default function Header({
       <button className="hbtn hb-pay" onClick={onPaiement}>Paiements</button>
       <button className="hbtn hb-arch" onClick={onArchive}>Archiver</button>
       <div className="hsep" />
-      <button className="hbtn hb-ghost" onClick={onDashboard}>Dashboard</button>
+      <button className="hbtn hb-ghost" onClick={onDashboard}>Tableau de bord</button>
       <button className="hbtn hb-ghost" onClick={onRappels}>Rappels</button>
       <button className="hbtn hb-ghost" onClick={onTrashView}>Corbeille</button>
       <button className="hbtn hb-ghost" onClick={onExport}>Import/Export</button>

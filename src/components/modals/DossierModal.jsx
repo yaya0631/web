@@ -67,7 +67,7 @@ export default function DossierModal({ editing, rows, onSave }) {
       })
 
       await onSave(payload)
-      closeModal('m-dossier')
+      closeModal('all')
     } finally {
       setSaving(false)
     }

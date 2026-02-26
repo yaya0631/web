@@ -9,6 +9,7 @@ function ensureOverlayBindings(overlay) {
 }
 
 export function openModal(id) {
+  closeModal('all')
   const overlay = document.getElementById(id)
   if (!overlay) return
   ensureOverlayBindings(overlay)

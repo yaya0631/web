@@ -1,0 +1,60 @@
+name: Standby - GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GITHUB_PAGES: "1"
+  VITE_SUPABASE_URL: "https://vlvaolzoorrllqrkknxh.supabase.co"
+  VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsdmFvbHpvb3JybGxxcmtrbnhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg1NTksImV4cCI6MjA4NzY1NDU1OX0.p2k3L0jd421ns8te6X8a6bR333QkMnFjqp-NO7gsCrE"
+  SUPABASE_URL: "https://vlvaolzoorrllqrkknxh.supabase.co"
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsdmFvbHpvb3JybGxxcmtrbnhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg1NTksImV4cCI6MjA4NzY1NDU1OX0.p2k3L0jd421ns8te6X8a6bR333QkMnFjqp-NO7gsCrE"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

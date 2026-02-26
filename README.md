@@ -1,92 +1,123 @@
-# Web App (React + Vite)
+# GeoMan Web (React + Supabase + Vercel)
 
-Small React site deployed on Vercel.
+Professional web app for dossier management.
+
+## Live URLs
+
+- Production (Vercel): `https://web-lake-six-70.vercel.app`
+- Standby (GitHub Pages): `https://yaya0631.github.io/web/`
 
 ## Stack
 
 - React 19
 - Vite 7
+- Supabase (database/backend)
 - Vercel (production hosting)
+- GitHub Pages (standby hosting)
 
-## Live URLs
+## Environment
 
-- Primary alias: `https://web-lake-six-70.vercel.app`
-- Deployment URL (may change per deploy): `https://web-8mc7udkjp-yaya0631s-projects.vercel.app`
+Use `.env.local` with:
 
-## Project Files You Will Usually Edit
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-- `src/App.jsx` for page content
-- `src/App.css` for page styling
-- `src/index.css` for global styling
+`SUPABASE_URL` and `SUPABASE_ANON_KEY` are also accepted for compatibility.
 
-## Supabase Environment Setup
-
-This app now reads Supabase credentials from environment variables.
-
-1. Copy `.env.example` to `.env.local`
-2. Set values:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-
-Compatibility note:
-- Production currently works with existing Vercel env names `SUPABASE_URL` and `SUPABASE_ANON_KEY` too.
-
-## Run Locally
-
-PowerShell-safe commands:
+## Local Development
 
 ```powershell
 & 'C:\Program Files\nodejs\npm.cmd' install
 & 'C:\Program Files\nodejs\npm.cmd' run dev
 ```
 
-Then open the local URL shown by Vite (usually `http://localhost:5173`).
-
-## Build Check Before Deploy
+## Build
 
 ```powershell
 & 'C:\Program Files\nodejs\npm.cmd' run build
 ```
 
-This creates production files in `dist/`.
-
-## Redeploy After Changes (No Router Setup Needed)
-
-This app is hosted in the cloud, so no router port-forwarding is required.
-
-1. Save your changes.
-2. Commit and push to GitHub:
+## Deploy Production (Vercel)
 
 ```powershell
 & 'C:\Program Files\Git\cmd\git.exe' add .
-& 'C:\Program Files\Git\cmd\git.exe' commit -m "update site"
+& 'C:\Program Files\Git\cmd\git.exe' commit -m "update app"
 & 'C:\Program Files\Git\cmd\git.exe' push origin main
-```
-
-3. Trigger a production deploy:
-
-```powershell
 & 'C:\Program Files\nodejs\npx.cmd' vercel --prod --yes
 ```
 
-4. Open the URL returned by the command and verify the update.
+## Free Reliability Setup (Applied)
 
-## First-Time Vercel Login (Only If Needed)
+This project now includes automation for the 5 free-safety points:
+
+1. Keep free stack (Vercel + Supabase) and monitor health.
+2. Weekly backups in 2 locations.
+3. Secure local backup of env file.
+4. Monthly automated health check.
+5. Standby free deployment via GitHub Pages.
+
+### One-time setup on this PC
 
 ```powershell
-& 'C:\Program Files\nodejs\npx.cmd' vercel login
+& 'C:\Program Files\nodejs\npm.cmd' run setup:free
+& 'C:\Program Files\nodejs\npm.cmd' run env:secure:save
 ```
 
-## Optional: Connect a Custom Domain
+### What gets installed
 
-1. In Vercel: Project -> Settings -> Domains -> Add your domain.
-2. In your domain/DNS provider: add the DNS records Vercel shows.
-3. Wait for DNS propagation.
+- Weekly scheduled task: `GeoManWeeklyBackup`
+  - Runs Sunday 20:00
+  - Exports Supabase data to:
+    - `files/backups/weekly` (inside repo)
+    - `%USERPROFILE%\Documents\GeoManBackups\weekly` (second copy)
+- Monthly scheduled task: `GeoManMonthlyCheck`
+  - Runs day 1 at 09:00
+  - Writes health reports to `files/health`
+
+### Manual backup command
+
+```powershell
+& 'C:\Program Files\nodejs\npm.cmd' run backup:weekly
+```
+
+### Manual health check command
+
+```powershell
+& 'C:\Program Files\nodejs\npm.cmd' run health:monthly
+```
+
+### Secure env backup / restore
+
+```powershell
+& 'C:\Program Files\nodejs\npm.cmd' run env:secure:save
+& 'C:\Program Files\nodejs\npm.cmd' run env:secure:restore
+```
+
+Encrypted env file path:
+
+- `deploy/secrets/env.local.secure`
+
+## GitHub Automation Added
+
+- `.github/workflows/standby-pages.yml`
+  - Deploys standby app to GitHub Pages on each push to `main`.
+- `.github/workflows/weekly-backup.yml`
+  - Weekly cloud backup artifact (90-day retention).
+- `.github/workflows/monthly-health.yml`
+  - Monthly cloud health report artifact (90-day retention).
+
+## Common Files to Edit
+
+- `src/App.jsx`
+- `src/App.css`
+- `src/components/*`
+- `src/hooks/*`
+- `src/lib/*`
 
 ## Troubleshooting
 
-- If `npm` or `npx` is blocked in PowerShell, use `npm.cmd` and `npx.cmd` commands as shown above.
-- If deployment fails, run:
+- If PowerShell blocks `npm`/`npx`, use `npm.cmd`/`npx.cmd`.
+- If Vercel deploy fails:
 
 ```powershell
 & 'C:\Program Files\nodejs\npx.cmd' vercel logs

@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backup:weekly": "node scripts/backup_supabase.mjs --primary files/backups/weekly --secondary \"%USERPROFILE%\\\\Documents\\\\GeoManBackups\\\\weekly\" --keep-days 120",
+    "health:monthly": "node scripts/health_check.mjs --site-url https://web-lake-six-70.vercel.app --output files/health",
+    "setup:free": "powershell -ExecutionPolicy Bypass -File deploy/setup_free_reliability.ps1",
+    "env:secure:save": "powershell -ExecutionPolicy Bypass -File deploy/save_env_secure.ps1",
+    "env:secure:restore": "powershell -ExecutionPolicy Bypass -File deploy/restore_env_secure.ps1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

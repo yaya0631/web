@@ -1,89 +1,90 @@
-import { fmt } from '../../lib/utils.jsx'
-import { EtatChip } from '../../lib/utils.jsx'
+import { getDisplayState, hasOutstanding, isArchived, isInTrash, isOverdue, sumPayments } from '../../lib/compat'
+import { ETAT_MAP, fmt } from '../../lib/utils.jsx'
 import { closeModal } from './Modal.jsx'
 
 export default function DashboardModal({ rows }) {
-  const total  = rows.length
-  const actifs = rows.filter(d => !d.archive).length
-  const arch   = rows.filter(d =>  d.archive).length
-  const att    = rows.reduce((s, d) => s + (d.montant  || 0), 0)
-  const enc    = rows.reduce((s, d) => s + (d.encaisse || 0), 0)
-  const pct    = att > 0 ? ((enc / att) * 100).toFixed(1) : 0
+  const activeRows = rows.filter((row) => !isInTrash(row))
+  const total = activeRows.length
+  const actifs = activeRows.filter((row) => !isArchived(row)).length
+  const archives = activeRows.filter((row) => isArchived(row)).length
+  const corbeille = rows.filter((row) => isInTrash(row)).length
+  const attendu = activeRows.reduce((sum, row) => sum + Number(row.montant || 0), 0)
+  const encaisse = activeRows.reduce((sum, row) => sum + sumPayments(row.paiements, row.encaisse), 0)
+  const pct = attendu > 0 ? ((encaisse / attendu) * 100).toFixed(1) : '0.0'
+  const urgent = activeRows.filter((row) => isOverdue(row)).length
+  const impayes = activeRows.filter((row) => hasOutstanding(row)).length
 
-  const byEtat = {}, byEnd = {}
-  rows.forEach(d => {
-    byEtat[d.etat] = (byEtat[d.etat] || 0) + 1
-    if (d.endroit) byEnd[d.endroit] = (byEnd[d.endroit] || 0) + 1
+  const byState = {}
+  const byEndroit = {}
+  activeRows.forEach((row) => {
+    const state = getDisplayState(row)
+    byState[state] = (byState[state] || 0) + 1
+    if (row.endroit) byEndroit[row.endroit] = (byEndroit[row.endroit] || 0) + 1
   })
 
-  const today  = new Date()
-  const urgent = rows.filter(d => {
-    if (!d.date_finale || d.archive) return false
-    const diff = (new Date(d.date_finale) - today) / 864e5
-    return diff >= 0 && diff <= 7
-  }).length
-
-  const dateStr = new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })
+  const dateStr = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 
   return (
     <div className="overlay" id="m-dashboard">
-      <div className="modal" style={{width:720}} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ width: 760 }} onClick={(e) => e.stopPropagation()}>
         <div className="mh">
           <div>
-            <div className="mh-title">📊 Tableau de Bord</div>
+            <div className="mh-title">Tableau de bord</div>
             <div className="mh-sub">{dateStr}</div>
           </div>
-          <button className="mh-close" onClick={() => closeModal('m-dashboard')}>✕</button>
+          <button className="mh-close" onClick={() => closeModal('m-dashboard')}>x</button>
         </div>
         <div className="mb">
-          {/* Cards */}
           <div className="db-grid">
             {[
-              { val: total,      lbl: 'Total Dossiers', color: 'var(--acc)' },
-              { val: actifs,     lbl: 'Actifs',         color: 'var(--green)' },
-              { val: arch,       lbl: 'Archivés',       color: 'var(--orange)' },
-              { val: fmt(att),   lbl: 'Attendu (DA)',   color: 'var(--yellow)' },
-              { val: fmt(enc),   lbl: 'Encaissé (DA)',  color: 'var(--green)', bar: pct },
-              { val: fmt(att-enc), lbl: 'Reste (DA)',   color: 'var(--red)' },
+              { val: total, lbl: 'Total dossiers', color: 'var(--acc)' },
+              { val: actifs, lbl: 'Actifs', color: 'var(--green)' },
+              { val: archives, lbl: 'Archives', color: 'var(--orange)' },
+              { val: corbeille, lbl: 'Corbeille', color: 'var(--red)' },
+              { val: fmt(attendu), lbl: 'Attendu (DA)', color: 'var(--yellow)' },
+              { val: fmt(encaisse), lbl: 'Encaisse (DA)', color: 'var(--green)', bar: pct },
+              { val: fmt(Math.max(attendu - encaisse, 0)), lbl: 'Reste (DA)', color: 'var(--red)' },
+              { val: urgent, lbl: 'Retards', color: 'var(--orange)' },
+              { val: impayes, lbl: 'Impayes', color: 'var(--purple)' },
             ].map(({ val, lbl, color, bar }) => (
               <div key={lbl} className="db-card">
-                <div className="db-val" style={{color}}>{val}</div>
+                <div className="db-val" style={{ color }}>{val}</div>
                 <div className="db-lbl">{lbl}</div>
                 {bar !== undefined && (
                   <div className="db-bar">
-                    <div className="db-bar-fill" style={{width:`${bar}%`,background:'var(--green)'}} />
+                    <div className="db-bar-fill" style={{ width: `${bar}%`, background: 'var(--green)' }} />
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Details */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:18}}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <div className="db-sec">
-              <div className="db-sec-title">État des dossiers</div>
-              {Object.entries(byEtat).map(([k, v]) => (
-                <div key={k} className="db-row">
-                  <span className="drl"><EtatChip etat={k} /></span>
-                  <span className="drv" style={{color:'var(--text)'}}>{v}</span>
+              <div className="db-sec-title">Etat des dossiers</div>
+              {Object.entries(byState).map(([state, count]) => (
+                <div key={state} className="db-row">
+                  <span className="drl">{ETAT_MAP[state]?.label || state}</span>
+                  <span className="drv" style={{ color: 'var(--text)' }}>{count}</span>
                 </div>
               ))}
             </div>
             <div className="db-sec">
-              <div className="db-sec-title">Par endroit &amp; alertes</div>
-              {Object.entries(byEnd).sort((a,b)=>b[1]-a[1]).map(([k,v]) => (
-                <div key={k} className="db-row">
-                  <span className="drl">{k}</span>
-                  <span className="drv" style={{color:'var(--acc)'}}>{v}</span>
+              <div className="db-sec-title">Par endroit</div>
+              {Object.entries(byEndroit).sort((a, b) => b[1] - a[1]).map(([endroit, count]) => (
+                <div key={endroit} className="db-row">
+                  <span className="drl">{endroit}</span>
+                  <span className="drv" style={{ color: 'var(--acc)' }}>{count}</span>
                 </div>
               ))}
-              <div className="db-row" style={{marginTop:8}}>
-                <span className="drl">🚨 Urgent (&lt;7j)</span>
-                <span className="drv" style={{color:'var(--yellow)'}}>{urgent}</span>
-              </div>
-              <div className="db-row">
-                <span className="drl">💰 Taux recouvrement</span>
-                <span className="drv" style={{color:'var(--green)'}}>{pct}%</span>
+              <div className="db-row" style={{ marginTop: 8 }}>
+                <span className="drl">Taux recouvrement</span>
+                <span className="drv" style={{ color: 'var(--green)' }}>{pct}%</span>
               </div>
             </div>
           </div>

@@ -1,101 +1,182 @@
+import { useState } from 'react'
 import { closeModal } from './Modal.jsx'
 import { downloadBlob, todayStr } from '../../lib/utils.jsx'
 import { supabase, TABLE } from '../../lib/supabase.js'
+import {
+  buildDesktopCsv,
+  bundleToRows,
+  normalizeDossier,
+  parseDesktopCsv,
+  rowsToDesktopBundle,
+  toDbPayload,
+} from '../../lib/compat'
+import { exportDesktopDbBlob, importRowsFromDesktopDb } from '../../lib/sqliteInterop'
 
-// ── CONFIRM DELETE ────────────────────────────
-export function ConfirmModal({ dossier, onConfirm }) {
+function chunk(values, size) {
+  const result = []
+  for (let i = 0; i < values.length; i += size) {
+    result.push(values.slice(i, i + size))
+  }
+  return result
+}
+
+async function upsertRows(rows) {
+  const normalized = rows.map((row) => normalizeDossier(row)).filter(Boolean)
+  const payloads = normalized.map((row) => toDbPayload(row)).filter(Boolean)
+  if (payloads.length === 0) return 0
+
+  for (const part of chunk(payloads, 100)) {
+    const { error } = await supabase.from(TABLE).upsert(part, { onConflict: 'id' })
+    if (error) throw error
+  }
+  return payloads.length
+}
+
+export function ConfirmModal({ dossier, mode = 'trash', onConfirm }) {
   if (!dossier) return null
+  const hardDelete = mode === 'purge'
   return (
     <div className="overlay" id="m-confirm">
-      <div className="modal modal-xs" onClick={e => e.stopPropagation()}>
-        <div className="mb" style={{padding:'28px 22px'}}>
-          <div className="conf-icon">⚠️</div>
+      <div className="modal modal-xs" onClick={(e) => e.stopPropagation()}>
+        <div className="mb" style={{ padding: '28px 22px' }}>
+          <div className="conf-icon">!</div>
           <p className="conf-msg">
-            Supprimer le dossier<br />
-            <strong style={{color:'var(--text)'}}>"{dossier.id} — {dossier.nom}"</strong> ?<br /><br />
-            <small style={{color:'var(--t4)'}}>Cette action est irréversible.</small>
+            {hardDelete ? 'Supprimer definitivement' : 'Deplacer vers la corbeille'}
+            <br />
+            <strong style={{ color: 'var(--text)' }}>"{dossier.id} - {dossier.nom}"</strong>
+            <br />
+            <br />
+            <small style={{ color: 'var(--t4)' }}>
+              {hardDelete ? 'Cette action est irreversible.' : 'Vous pourrez restaurer ce dossier depuis la corbeille.'}
+            </small>
           </p>
         </div>
         <div className="mf">
           <button className="hbtn hb-ghost" onClick={() => closeModal('m-confirm')}>Annuler</button>
-          <button className="hbtn hb-del" onClick={async () => { await onConfirm(); closeModal('m-confirm') }}>🗑 Supprimer</button>
+          <button
+            className="hbtn hb-del"
+            onClick={async () => {
+              await onConfirm()
+              closeModal('m-confirm')
+            }}
+          >
+            {hardDelete ? 'Supprimer' : 'Corbeille'}
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── EXPORT MODAL ──────────────────────────────
 export function ExportModal({ rows, onImportDone }) {
-  const exportJSON = () => {
-    const clean = rows.map(({ id, nom, telephone, endroit, montant, encaisse,
-      date_finale, date_archive, depot_cad, depot_domain, etat, archive,
-      acte, regul, agricole, observations, paiements, fichiers }) => ({
-        id, nom, telephone, endroit, montant, encaisse,
-        date_finale, date_archive, depot_cad, depot_domain, etat, archive,
-        acte, regul, agricole, observations, paiements, fichiers
-    }))
-    downloadBlob(new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' }), `geoman-backup-${todayStr()}.json`)
+  const [busy, setBusy] = useState(false)
+
+  const exportJson = () => {
+    const cleanRows = rows.map((row) => normalizeDossier(row)).filter(Boolean)
+    const payload = {
+      schema: 'geoman.web.sync.v1',
+      exported_at: new Date().toISOString(),
+      rows: cleanRows,
+      desktop_bundle: rowsToDesktopBundle(cleanRows),
+    }
+    downloadBlob(
+      new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }),
+      `geoman-sync-${todayStr()}.json`
+    )
   }
 
-  const exportCSV = () => {
-    const H = ['N° Dossier','Nom','Endroit','Téléphone','Montant','Encaissé','Date Finale','Dépôt CAD','Dépôt Domaine','État','Observations']
-    const R = rows.map(d => [d.id,d.nom,d.endroit,d.telephone,d.montant,d.encaisse,d.date_finale,d.depot_cad,d.depot_domain,d.etat,d.observations])
-    const csv = [H,...R].map(r => r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(',')).join('\n')
-    downloadBlob(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}),`geoman-${todayStr()}.csv`)
+  const exportDesktopCsvFile = () => {
+    const csv = buildDesktopCsv(rows)
+    downloadBlob(
+      new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }),
+      `geoman-desktop-${todayStr()}.csv`
+    )
   }
 
-  const handleImport = async (e) => {
-    const f = e.target.files[0]; if (!f) return
-    const text = await f.text()
+  const exportDesktopDbFile = async () => {
     try {
-      const data = JSON.parse(text)
-      if (!Array.isArray(data)) throw new Error('Format invalide')
-      for (const row of data) {
-        row.created_at = row.created_at || new Date().toISOString()
-        row.updated_at = new Date().toISOString()
-        await supabase.from(TABLE).upsert(row, { onConflict: 'id' })
+      setBusy(true)
+      const blob = await exportDesktopDbBlob(rows)
+      downloadBlob(blob, `geoman-desktop-backup-${todayStr()}.db`)
+    } catch (error) {
+      alert(`Erreur export DB: ${error.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setBusy(true)
+    try {
+      const filename = file.name.toLowerCase()
+      let importedRows = []
+
+      if (filename.endsWith('.db') || filename.endsWith('.sqlite') || filename.endsWith('.sqlite3')) {
+        importedRows = await importRowsFromDesktopDb(file)
+      } else if (filename.endsWith('.csv')) {
+        importedRows = parseDesktopCsv(await file.text())
+      } else if (filename.endsWith('.json')) {
+        const parsed = JSON.parse(await file.text())
+        importedRows = bundleToRows(parsed.desktop_bundle || parsed)
+      } else {
+        throw new Error('Format non supporte. Utilisez JSON, CSV ou DB.')
       }
-      onImportDone(data.length)
+
+      if (!importedRows.length) {
+        throw new Error('Aucune ligne valide a importer.')
+      }
+
+      const count = await upsertRows(importedRows)
+      onImportDone(count)
       closeModal('m-export')
-    } catch(err) { alert('Erreur import : ' + err.message) }
-    e.target.value = ''
+    } catch (error) {
+      alert(`Erreur import: ${error.message}`)
+    } finally {
+      setBusy(false)
+      event.target.value = ''
+    }
   }
 
   return (
     <div className="overlay" id="m-export">
-      <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
         <div className="mh">
-          <div className="mh-title">↑ Exporter les Données</div>
-          <button className="mh-close" onClick={() => closeModal('m-export')}>✕</button>
+          <div className="mh-title">Import / Export compatibilite desktop</div>
+          <button className="mh-close" onClick={() => closeModal('m-export')}>x</button>
         </div>
         <div className="mb">
           <div className="export-grid">
-            <div className="exp-card" onClick={exportJSON}>
-              <div className="exp-icon">📄</div>
-              <div className="exp-title">JSON</div>
-              <div className="exp-desc">Sauvegarde complète réimportable</div>
+            <div className="exp-card" onClick={exportJson}>
+              <div className="exp-title">JSON Sync</div>
+              <div className="exp-desc">Export complet web + bundle desktop.</div>
             </div>
-            <div className="exp-card" onClick={exportCSV}>
-              <div className="exp-icon">📊</div>
-              <div className="exp-title">CSV</div>
-              <div className="exp-desc">Compatible Excel / Google Sheets</div>
+            <div className="exp-card" onClick={exportDesktopCsvFile}>
+              <div className="exp-title">CSV Desktop</div>
+              <div className="exp-desc">Format CSV identique a GeoMan desktop.</div>
             </div>
-            <div className="exp-card" onClick={() => window.print()}>
-              <div className="exp-icon">🖨️</div>
-              <div className="exp-title">Imprimer</div>
-              <div className="exp-desc">Impression ou export PDF</div>
+            <div className="exp-card" onClick={exportDesktopDbFile}>
+              <div className="exp-title">Backup DB Desktop</div>
+              <div className="exp-desc">Genere un fichier SQLite .db compatible desktop.</div>
             </div>
-            <label className="exp-card" style={{cursor:'pointer'}}>
-              <div className="exp-icon">📥</div>
-              <div className="exp-title">Importer JSON</div>
-              <div className="exp-desc">Restaurer une sauvegarde</div>
-              <input type="file" accept=".json" style={{display:'none'}} onChange={handleImport} />
+            <label className="exp-card" style={{ cursor: 'pointer' }}>
+              <div className="exp-title">Importer JSON / CSV / DB</div>
+              <div className="exp-desc">Importe depuis export web ou backup desktop.</div>
+              <input
+                type="file"
+                accept=".json,.csv,.db,.sqlite,.sqlite3"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
             </label>
           </div>
         </div>
         <div className="mf">
-          <button className="hbtn hb-ghost" onClick={() => closeModal('m-export')}>Fermer</button>
+          <button className="hbtn hb-ghost" onClick={() => closeModal('m-export')} disabled={busy}>
+            {busy ? 'Traitement...' : 'Fermer'}
+          </button>
         </div>
       </div>
     </div>

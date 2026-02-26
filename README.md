@@ -19,6 +19,18 @@ Small React site deployed on Vercel.
 - `src/App.css` for page styling
 - `src/index.css` for global styling
 
+## Supabase Environment Setup
+
+This app now reads Supabase credentials from environment variables.
+
+1. Copy `.env.example` to `.env.local`
+2. Set values:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+
+Compatibility note:
+- Production currently works with existing Vercel env names `SUPABASE_URL` and `SUPABASE_ANON_KEY` too.
+
 ## Run Locally
 
 PowerShell-safe commands:

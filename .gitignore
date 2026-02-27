@@ -31,3 +31,6 @@ files/backups/
 files/health/
 deploy/secrets/
 deploy/reliability.config.json
+
+# Build outputs
+lint-output.txt

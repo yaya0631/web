@@ -9,8 +9,8 @@ jobs:
   health:
     runs-on: ubuntu-latest
     env:
-      VITE_SUPABASE_URL: "https://vlvaolzoorrllqrkknxh.supabase.co"
-      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsdmFvbHpvb3JybGxxcmtrbnhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzg1NTksImV4cCI6MjA4NzY1NDU1OX0.p2k3L0jd421ns8te6X8a6bR333QkMnFjqp-NO7gsCrE"
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       WEBSITE_URL: "https://web-lake-six-70.vercel.app"
     steps:
       - name: Checkout

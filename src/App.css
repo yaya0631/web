@@ -299,6 +299,60 @@ td.td-n   { color: var(--t4); font-family: var(--mono); font-size: 11px; }
   #statusbar { gap: 10px; }
 }
 
+/* ── AUTOCOMPLETE ── */
+.autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--s2); border: 1px solid var(--b2); border-radius: 0 0 var(--r) var(--r); max-height: 180px; overflow-y: auto; z-index: 50; box-shadow: var(--sh2); }
+.autocomplete-item { padding: 7px 11px; font-size: 12.5px; color: var(--t2); cursor: pointer; transition: background .1s; }
+.autocomplete-item:hover { background: var(--s3); color: var(--text); }
+
+/* ── CONTEXT MENU ── */
+.ctx-menu { position: fixed; background: var(--s1); border: 1px solid var(--b2); border-radius: var(--r2); padding: 4px 0; min-width: 180px; z-index: 2000; box-shadow: var(--sh2); animation: modalIn .12s ease; }
+.ctx-item { padding: 8px 16px; font-size: 12.5px; color: var(--t2); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .1s; }
+.ctx-item:hover { background: var(--s3); color: var(--text); }
+.ctx-item.ctx-danger { color: var(--red); }
+.ctx-item.ctx-danger:hover { background: rgba(255,77,109,.1); }
+.ctx-sep { height: 1px; background: var(--b1); margin: 4px 0; }
+.ctx-shortcut { margin-left: auto; font-size: 10px; color: var(--t4); font-family: var(--mono); }
+
+/* ── COLUMN TOGGLE ── */
+.col-toggle-list { display: flex; flex-direction: column; gap: 6px; }
+.col-toggle-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; color: var(--t2); cursor: pointer; }
+.col-toggle-item:hover { color: var(--text); }
+.col-toggle-item input { accent-color: var(--acc); width: 16px; height: 16px; cursor: pointer; }
+
+/* ── SETTINGS ── */
+.settings-section { margin-bottom: 22px; }
+.settings-section-title { font-size: 11px; font-weight: 700; color: var(--t4); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--b1); }
+
+/* ── HISTORY ── */
+.hist-item { padding: 10px 0; border-bottom: 1px solid var(--b1); font-size: 12.5px; }
+.hist-item:last-child { border-bottom: none; }
+.hist-time { font-family: var(--mono); font-size: 11px; color: var(--t4); }
+.hist-action { color: var(--acc); font-weight: 600; margin-left: 10px; }
+.hist-detail { color: var(--t3); font-size: 11.5px; margin-top: 3px; }
+
+/* ── STAGE CARDS ── */
+.stage-cards { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.stage-card { background: var(--s2); border: 1px solid var(--b1); border-radius: var(--r); padding: 8px 14px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px; }
+.stage-card:hover { border-color: var(--b3); transform: translateY(-1px); }
+.stage-card.active { border-color: var(--acc); background: rgba(29,138,255,.08); color: var(--acc); }
+.stage-card .stage-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── QUICK FILL ── */
+.quick-btns { display: flex; gap: 6px; margin-top: 6px; }
+.quick-btn { background: var(--s3); border: 1px solid var(--b2); border-radius: var(--r); padding: 4px 10px; font-size: 11px; font-family: var(--mono); font-weight: 600; color: var(--t2); cursor: pointer; transition: all .15s; }
+.quick-btn:hover { border-color: var(--acc); color: var(--acc); background: rgba(29,138,255,.06); }
+
+/* ── RECENTS DROPDOWN ── */
+.recents-wrap { position: relative; }
+.recents-dropdown { position: absolute; top: 100%; right: 0; background: var(--s1); border: 1px solid var(--b2); border-radius: var(--r2); min-width: 260px; max-height: 320px; overflow-y: auto; z-index: 500; box-shadow: var(--sh2); padding: 4px 0; margin-top: 4px; }
+.recents-item { padding: 8px 14px; font-size: 12px; color: var(--t2); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .1s; }
+.recents-item:hover { background: var(--s3); color: var(--text); }
+.recents-id { font-family: var(--mono); color: var(--acc); font-weight: 600; font-size: 11px; }
+.recents-empty { padding: 16px; text-align: center; font-size: 12px; color: var(--t4); }
+
+/* ── MULTI SELECT ── */
+tr.multi-sel { background: rgba(29,138,255,.08); outline: 1px solid rgba(29,138,255,.2) inset; }
+
 @media print {
   #header, #filterbar, #right-panel, #statusbar, #legend, .overlay { display: none !important; }
   #table-wrap { overflow: visible; }

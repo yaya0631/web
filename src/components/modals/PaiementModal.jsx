@@ -1,33 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { nextReceiptNumber, normalizePayments, sumPayments } from '../../lib/compat'
 import { fmt, todayStr } from '../../lib/utils.jsx'
 import { closeModal } from './Modal.jsx'
+import { exportReceiptPdf } from '../../lib/pdfExport'
 
 const STAGES = [
-  'Acompte',
-  'Travaux terrain',
-  'Depot CAD',
-  'Remise dossier',
-  'Solde final',
-  'Autre',
+  { key: 'Acompte', label: 'Acompte', color: '#ffd166' },
+  { key: 'Travaux terrain', label: 'Travaux terrain', color: '#1d8aff' },
+  { key: 'Depot CAD', label: 'Depot CAD', color: '#ff8c42' },
+  { key: 'Remise dossier', label: 'Remise dossier', color: '#9b72ff' },
+  { key: 'Solde final', label: 'Solde final', color: '#00d68f' },
+  { key: 'Autre', label: 'Autre', color: '#4f6480' },
 ]
 
 const MODES = ['Especes', 'Cheque', 'Virement', 'CCP', 'Autre']
 
 export default function PaiementModal({ dossier, onUpdate }) {
+  const resetKey = dossier?.id || ''
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayStr())
   const [note, setNote] = useState('')
-  const [stage, setStage] = useState(STAGES[0])
+  const [stage, setStage] = useState(STAGES[0].key)
   const [mode, setMode] = useState(MODES[0])
+  const [lastResetKey, setLastResetKey] = useState('')
 
-  useEffect(() => {
+  // Reset form when dossier changes (using controlled pattern)
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey)
     setAmount('')
     setDate(todayStr())
     setNote('')
-    setStage(STAGES[0])
+    setStage(STAGES[0].key)
     setMode(MODES[0])
-  }, [dossier?.id])
+  }
 
   const history = useMemo(() => normalizePayments(dossier?.paiements), [dossier?.paiements])
   const totalPaid = sumPayments(history, dossier?.encaisse)
@@ -68,6 +73,18 @@ export default function PaiementModal({ dossier, onUpdate }) {
     await onUpdate(dossier.id, { paiements, encaisse })
   }
 
+  const handlePrintReceipt = (payment) => {
+    exportReceiptPdf(dossier, payment)
+  }
+
+  const quickFill = (fraction) => {
+    if (fraction === 'reste') {
+      setAmount(String(remaining))
+    } else {
+      setAmount(String(Math.round(total * fraction)))
+    }
+  }
+
   return (
     <div className="overlay" id="m-paiement">
       <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
@@ -100,10 +117,30 @@ export default function PaiementModal({ dossier, onUpdate }) {
             </div>
           </div>
 
+          {/* Stage cards */}
+          <div className="stage-cards">
+            {STAGES.map((s) => (
+              <div
+                key={s.key}
+                className={`stage-card ${stage === s.key ? 'active' : ''}`}
+                onClick={() => setStage(s.key)}
+              >
+                <span className="stage-dot" style={{ background: s.color }} />
+                {s.label}
+              </div>
+            ))}
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="fg">
               <label className="fl-f">Montant verse (DA) *</label>
               <input className="fc" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" min="0" />
+              <div className="quick-btns">
+                <button className="quick-btn" onClick={() => quickFill(0.25)}>1/4</button>
+                <button className="quick-btn" onClick={() => quickFill(1 / 3)}>1/3</button>
+                <button className="quick-btn" onClick={() => quickFill(0.5)}>1/2</button>
+                <button className="quick-btn" onClick={() => quickFill('reste')}>Solde restant</button>
+              </div>
             </div>
             <div className="fg">
               <label className="fl-f">Date</label>
@@ -112,7 +149,7 @@ export default function PaiementModal({ dossier, onUpdate }) {
             <div className="fg">
               <label className="fl-f">Jalon</label>
               <select className="fc" value={stage} onChange={(e) => setStage(e.target.value)}>
-                {STAGES.map((item) => <option key={item}>{item}</option>)}
+                {STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </div>
             <div className="fg">
@@ -134,7 +171,7 @@ export default function PaiementModal({ dossier, onUpdate }) {
               </div>
               {history.map((p) => (
                 <div key={p.id} className="pay-hist-item">
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--green)' }}>{fmt(p.montant_paye)} DA</span>
                     <span style={{ color: 'var(--t3)', fontSize: 11, marginLeft: 8 }}>{p.date_paiement}</span>
                     <span style={{ color: 'var(--t2)', fontSize: 11, marginLeft: 8 }}>{p.etape}</span>
@@ -146,12 +183,21 @@ export default function PaiementModal({ dossier, onUpdate }) {
                       <span style={{ color: 'var(--t4)', fontSize: 11, marginLeft: 8 }}>- {p.notes}</span>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleRemove(p.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 14 }}
-                  >
-                    x
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                    <button
+                      onClick={() => handlePrintReceipt(p)}
+                      style={{ background: 'none', border: 'none', color: 'var(--acc)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font)' }}
+                      title="Imprimer quittance"
+                    >
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => handleRemove(p.id)}
+                      style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 14 }}
+                    >
+                      x
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

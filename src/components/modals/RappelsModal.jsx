@@ -1,6 +1,28 @@
 import { isArchived, isInTrash } from '../../lib/compat'
 import { closeModal } from './Modal.jsx'
 
+function ReminderBlock({ title, list, color }) {
+  if (!list.length) return null
+  return (
+    <div className="db-sec">
+      <div className="db-sec-title">{title} ({list.length})</div>
+      {list.map((row) => (
+        <div key={row.id} className="rp-item">
+          <div className="rp-content">
+            <div className="rp-name">{row.id} - {row.nom}</div>
+            <div className="rp-detail">
+              {row.endroit} {row.observations ? `. ${row.observations}` : ''}
+            </div>
+          </div>
+          <div className="rp-badge" style={{ color }}>
+            {row.diff < 0 ? `${Math.abs(row.diff)}j retard` : row.diff === 0 ? "Aujourd'hui" : `dans ${row.diff}j`}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function RappelsModal({ rows }) {
   const today = new Date()
   const items = rows
@@ -15,28 +37,6 @@ export default function RappelsModal({ rows }) {
   const soon = items.filter((row) => row.diff >= 0 && row.diff <= 7)
   const coming = items.filter((row) => row.diff > 7 && row.diff <= 30)
 
-  const Block = ({ title, list, color }) => {
-    if (!list.length) return null
-    return (
-      <div className="db-sec">
-        <div className="db-sec-title">{title} ({list.length})</div>
-        {list.map((row) => (
-          <div key={row.id} className="rp-item">
-            <div className="rp-content">
-              <div className="rp-name">{row.id} - {row.nom}</div>
-              <div className="rp-detail">
-                {row.endroit} {row.observations ? `. ${row.observations}` : ''}
-              </div>
-            </div>
-            <div className="rp-badge" style={{ color }}>
-              {row.diff < 0 ? `${Math.abs(row.diff)}j retard` : row.diff === 0 ? "Aujourd'hui" : `dans ${row.diff}j`}
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div className="overlay" id="m-rappels">
       <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
@@ -49,9 +49,9 @@ export default function RappelsModal({ rows }) {
             <div style={{ textAlign: 'center', padding: 30, color: 'var(--t3)' }}>Aucune alerte pour le moment.</div>
           ) : (
             <>
-              <Block title="En retard" list={overdue} color="var(--red)" />
-              <Block title="Echeance dans 7 jours" list={soon} color="var(--yellow)" />
-              <Block title="Prochainement (30j)" list={coming} color="var(--acc)" />
+              <ReminderBlock title="En retard" list={overdue} color="var(--red)" />
+              <ReminderBlock title="Echeance dans 7 jours" list={soon} color="var(--yellow)" />
+              <ReminderBlock title="Prochainement (30j)" list={coming} color="var(--acc)" />
             </>
           )}
         </div>

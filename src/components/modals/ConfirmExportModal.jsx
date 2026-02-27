@@ -11,6 +11,7 @@ import {
   toDbPayload,
 } from '../../lib/compat'
 import { exportDesktopDbBlob, importRowsFromDesktopDb } from '../../lib/sqliteInterop'
+import { exportDossiersPdf, exportStatsPdf } from '../../lib/pdfExport'
 
 function chunk(values, size) {
   const result = []
@@ -105,6 +106,22 @@ export function ExportModal({ rows, onImportDone }) {
     }
   }
 
+  const handlePdfDossiers = () => {
+    try {
+      exportDossiersPdf(rows)
+    } catch (error) {
+      alert(`Erreur export PDF: ${error.message}`)
+    }
+  }
+
+  const handlePdfStats = () => {
+    try {
+      exportStatsPdf(rows)
+    } catch (error) {
+      alert(`Erreur export PDF: ${error.message}`)
+    }
+  }
+
   const handleImport = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -142,28 +159,36 @@ export function ExportModal({ rows, onImportDone }) {
 
   return (
     <div className="overlay" id="m-export">
-      <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={{ width: 620 }} onClick={(e) => e.stopPropagation()}>
         <div className="mh">
-          <div className="mh-title">Import / Export compatibilite version desktop</div>
+          <div className="mh-title">Import / Export</div>
           <button className="mh-close" onClick={() => closeModal('m-export')}>x</button>
         </div>
         <div className="mb">
-          <div className="export-grid">
+          <div className="export-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
             <div className="exp-card" onClick={exportJson}>
-              <div className="exp-title">Synchronisation JSON</div>
-              <div className="exp-desc">Export complet web avec bundle desktop.</div>
+              <div className="exp-title">JSON Sync</div>
+              <div className="exp-desc">Export complet web + bundle desktop.</div>
             </div>
             <div className="exp-card" onClick={exportDesktopCsvFile}>
               <div className="exp-title">CSV Desktop</div>
-              <div className="exp-desc">Format CSV identique a GeoMan desktop.</div>
+              <div className="exp-desc">Format CSV compatible desktop.</div>
             </div>
             <div className="exp-card" onClick={exportDesktopDbFile}>
-              <div className="exp-title">Sauvegarde DB Desktop</div>
-              <div className="exp-desc">Genere un fichier SQLite .db compatible desktop.</div>
+              <div className="exp-title">SQLite DB</div>
+              <div className="exp-desc">Fichier .db compatible desktop.</div>
+            </div>
+            <div className="exp-card" onClick={handlePdfDossiers}>
+              <div className="exp-title">PDF Dossiers</div>
+              <div className="exp-desc">Tableau des dossiers en PDF.</div>
+            </div>
+            <div className="exp-card" onClick={handlePdfStats}>
+              <div className="exp-title">PDF Statistiques</div>
+              <div className="exp-desc">Rapport financier et analyse.</div>
             </div>
             <label className="exp-card" style={{ cursor: 'pointer' }}>
-              <div className="exp-title">Importer JSON / CSV / DB</div>
-              <div className="exp-desc">Importe depuis export web ou backup desktop.</div>
+              <div className="exp-title">Importer</div>
+              <div className="exp-desc">JSON, CSV ou DB desktop.</div>
               <input
                 type="file"
                 accept=".json,.csv,.db,.sqlite,.sqlite3"

@@ -84,6 +84,24 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : []
 }
 
+export function normalizeHistoryEntry(value) {
+  return {
+    date: normalizeSpace(value?.date) || nowIso(),
+    action: normalizeSpace(value?.action) || 'Modification',
+    details: normalizeSpace(value?.details) || null,
+  }
+}
+
+export function normalizeHistory(values) {
+  return ensureArray(values).map((v) => normalizeHistoryEntry(v))
+}
+
+export function addHistoryEntry(existing, action, details) {
+  const history = normalizeHistory(existing)
+  history.push(normalizeHistoryEntry({ date: nowIso(), action, details }))
+  return history
+}
+
 export function normalizePayment(value) {
   const amount = toNumber(value?.montant_paye ?? value?.montant, 0)
   const date = normalizeSpace(value?.date_paiement ?? value?.date) || todayYmd()
@@ -191,6 +209,7 @@ export function normalizeDossier(value) {
     etat: status,
     paiements,
     fichiers,
+    historique: normalizeHistory(value?.historique),
     created_at: created,
     updated_at: updated,
   }
@@ -218,6 +237,7 @@ export function toDbPayload(value, { touchUpdated = true } = {}) {
     etat: row.etat,
     paiements: row.paiements,
     fichiers: row.fichiers,
+    historique: row.historique || [],
     created_at: row.created_at || nowIso(),
     updated_at: touchUpdated ? nowIso() : row.updated_at || nowIso(),
   }
@@ -510,12 +530,12 @@ export function parseDesktopCsv(text) {
     const encaisse = toNumber(values[iEncaisse], 0)
     const paiements = encaisse > 0
       ? [normalizePayment({
-          montant_paye: encaisse,
-          date_paiement: normalizeSpace(values[iDate]) || todayYmd(),
-          etape: 'Import CSV',
-          notes: 'Import desktop CSV',
-          mode_paiement: 'Especes',
-        })]
+        montant_paye: encaisse,
+        date_paiement: normalizeSpace(values[iDate]) || todayYmd(),
+        etape: 'Import CSV',
+        notes: 'Import desktop CSV',
+        mode_paiement: 'Especes',
+      })]
       : []
 
     const row = normalizeDossier({

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEPOT_OPTIONS, STATUS, normalizeDossier } from '../../lib/compat'
 import { todayStr } from '../../lib/utils.jsx'
 import { closeModal } from './Modal.jsx'
@@ -22,9 +22,14 @@ const EMPTY = {
   observations: '',
 }
 
-export default function DossierModal({ editing, rows, onSave }) {
+export default function DossierModal({ editing, rows, onSave, prefill }) {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false)
+  const [phoneWarning, setPhoneWarning] = useState('')
+  const nameRef = useRef(null)
+  const modalRef = useRef(null)
 
   useEffect(() => {
     if (editing) {
@@ -32,12 +37,55 @@ export default function DossierModal({ editing, rows, onSave }) {
       if (current) {
         setForm({ ...EMPTY, ...normalizeDossier(current) })
       }
+    } else if (prefill) {
+      setForm({ ...EMPTY, ...prefill, id: '', date_finale: todayStr() })
     } else {
       setForm({ ...EMPTY, date_finale: todayStr() })
     }
-  }, [editing, rows])
+    setDirty(false)
+    setPhoneWarning('')
+  }, [editing, rows, prefill])
 
-  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }))
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setDirty(true)
+  }
+
+  // Name autocomplete suggestions
+  const nameSuggestions = useMemo(() => {
+    const query = (form.nom || '').trim().toLowerCase()
+    if (query.length < 2) return []
+    const existing = [...new Set(rows.map((r) => r.nom).filter(Boolean))]
+    return existing
+      .filter((name) => name.toLowerCase().includes(query) && name.toLowerCase() !== query)
+      .slice(0, 8)
+  }, [form.nom, rows])
+
+  // Phone duplicate detection
+  const checkPhone = (phone) => {
+    const cleaned = String(phone || '').trim()
+    if (!cleaned) {
+      setPhoneWarning('')
+      return
+    }
+    const duplicate = rows.find(
+      (r) => String(r.telephone || '').trim() === cleaned && r.id !== (editing || form.id)
+    )
+    if (duplicate) {
+      setPhoneWarning(`Ce numero est deja utilise dans le dossier ${duplicate.id} (${duplicate.nom})`)
+    } else {
+      setPhoneWarning('')
+    }
+  }
+
+  const handleClose = () => {
+    if (dirty) {
+      if (!confirm('Vous avez des modifications non enregistrees. Fermer quand meme ?')) {
+        return
+      }
+    }
+    closeModal('m-dossier')
+  }
 
   const handleSave = async () => {
     if (!String(form.id || '').trim()) {
@@ -64,24 +112,41 @@ export default function DossierModal({ editing, rows, onSave }) {
         date_archive: form.date_archive || null,
         paiements: existing?.paiements || [],
         fichiers: existing?.fichiers || [],
+        historique: existing?.historique || [],
       })
 
       await onSave(payload)
+      setDirty(false)
       closeModal('all')
     } finally {
       setSaving(false)
     }
   }
 
+  // Ctrl+Enter to save
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const overlay = document.getElementById('m-dossier')
+        if (overlay?.classList.contains('open')) {
+          e.preventDefault()
+          handleSave()
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  })
+
   return (
     <div className="overlay" id="m-dossier">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         <div className="mh">
           <div>
-            <div className="mh-title">{editing ? `Modifier - ${editing}` : 'Nouveau dossier'}</div>
+            <div className="mh-title">{editing ? `Modifier - ${editing}` : prefill ? 'Dupliquer un dossier' : 'Nouveau dossier'}</div>
             <div className="mh-sub">{editing ? form.nom : 'Remplissez les informations'}</div>
           </div>
-          <button className="mh-close" onClick={() => closeModal('m-dossier')}>x</button>
+          <button className="mh-close" onClick={handleClose}>x</button>
         </div>
         <div className="mb">
           <div className="fg-grid">
@@ -95,14 +160,38 @@ export default function DossierModal({ editing, rows, onSave }) {
                 disabled={Boolean(editing)}
               />
             </div>
-            <div className="fg">
+            <div className="fg" style={{ position: 'relative' }}>
               <label className="fl-f">Nom et prenom *</label>
               <input
+                ref={nameRef}
                 className="fc"
                 value={form.nom}
-                onChange={(e) => setField('nom', e.target.value)}
+                onChange={(e) => {
+                  setField('nom', e.target.value)
+                  setShowNameSuggestions(true)
+                }}
+                onFocus={() => setShowNameSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
                 placeholder="Prenom NOM"
+                autoComplete="off"
               />
+              {showNameSuggestions && nameSuggestions.length > 0 && (
+                <div className="autocomplete-dropdown">
+                  {nameSuggestions.map((name) => (
+                    <div
+                      key={name}
+                      className="autocomplete-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        setField('nom', name)
+                        setShowNameSuggestions(false)
+                      }}
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="fg">
               <label className="fl-f">Telephone</label>
@@ -110,8 +199,14 @@ export default function DossierModal({ editing, rows, onSave }) {
                 className="fc"
                 value={form.telephone}
                 onChange={(e) => setField('telephone', e.target.value)}
+                onBlur={(e) => checkPhone(e.target.value)}
                 placeholder="0XXXXXXXXX"
               />
+              {phoneWarning && (
+                <div style={{ fontSize: 11, color: 'var(--orange)', marginTop: 2 }}>
+                  {phoneWarning}
+                </div>
+              )}
             </div>
             <div className="fg">
               <label className="fl-f">Endroit</label>
@@ -224,7 +319,10 @@ export default function DossierModal({ editing, rows, onSave }) {
           </div>
         </div>
         <div className="mf">
-          <button className="hbtn hb-ghost" onClick={() => closeModal('m-dossier')}>Annuler</button>
+          <div style={{ fontSize: 11, color: 'var(--t4)', display: 'flex', alignItems: 'center', marginRight: 'auto' }}>
+            Ctrl+Entree pour enregistrer
+          </div>
+          <button className="hbtn hb-ghost" onClick={handleClose}>Annuler</button>
           <button className="hbtn hb-edit" onClick={handleSave} disabled={saving}>
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>

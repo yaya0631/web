@@ -3,7 +3,7 @@ import { MainPage } from './pages/MainPage';
 import { LoginPage } from './pages/LoginPage';
 import { useDataStore } from './store/dataStore';
 import { useAppStore } from './store/appStore';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { DossierModal } from './components/modals/DossierModal';
 import { PaymentModal } from './components/modals/PaymentModal';
 import { DashboardModal } from './components/modals/DashboardModal';
@@ -16,6 +16,10 @@ import { useModalStore } from './store/modalStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+
+// Persist the "reminders shown" flag in sessionStorage so tab switches don't reset it
+const REMINDERS_SHOWN_KEY = 'geoman_reminders_shown';
 
 export default function App() {
   const { fetchDossiers, fetchPaiements, fetchFichiers, fetchHistorique } = useDataStore();
@@ -23,8 +27,7 @@ export default function App() {
   const { openRemindersModal } = useModalStore();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  // Track whether reminders have been shown THIS session (not on every tab switch)
-  const remindersShownRef = useRef(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
 
   useKeyboardShortcuts();
 
@@ -56,9 +59,13 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      // Reset reminders flag on fresh sign-in only
       if (event === 'SIGNED_IN') {
-        remindersShownRef.current = false;
+        // Clear reminders flag on fresh login so it shows once per session
+        sessionStorage.removeItem(REMINDERS_SHOWN_KEY);
+      }
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link in their email
+        setIsPasswordReset(true);
       }
     });
 
@@ -74,10 +81,10 @@ export default function App() {
     }
   }, [session, fetchDossiers, fetchPaiements, fetchFichiers, fetchHistorique]);
 
-  // Show reminders modal ONCE per login session
+  // Show reminders modal ONCE per browser session (survives tab switches)
   useEffect(() => {
-    if (session && showRemindersOnStartup && !remindersShownRef.current) {
-      remindersShownRef.current = true;
+    if (session && showRemindersOnStartup && !sessionStorage.getItem(REMINDERS_SHOWN_KEY)) {
+      sessionStorage.setItem(REMINDERS_SHOWN_KEY, '1');
       const timer = setTimeout(() => openRemindersModal(), 800);
       return () => clearTimeout(timer);
     }
@@ -88,6 +95,16 @@ export default function App() {
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
       </div>
+    );
+  }
+
+  // Password reset flow — user arrived via the email link
+  if (isPasswordReset) {
+    return (
+      <>
+        <ResetPasswordPage onDone={() => setIsPasswordReset(false)} />
+        <Toaster theme="dark" position="bottom-right" />
+      </>
     );
   }
 

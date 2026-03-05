@@ -3,7 +3,7 @@ import { MainPage } from './pages/MainPage';
 import { LoginPage } from './pages/LoginPage';
 import { useDataStore } from './store/dataStore';
 import { useAppStore } from './store/appStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { DossierModal } from './components/modals/DossierModal';
 import { PaymentModal } from './components/modals/PaymentModal';
 import { DashboardModal } from './components/modals/DashboardModal';
@@ -23,6 +23,8 @@ export default function App() {
   const { openRemindersModal } = useModalStore();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Track whether reminders have been shown THIS session (not on every tab switch)
+  const remindersShownRef = useRef(false);
 
   useKeyboardShortcuts();
 
@@ -52,8 +54,12 @@ export default function App() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      // Reset reminders flag on fresh sign-in only
+      if (event === 'SIGNED_IN') {
+        remindersShownRef.current = false;
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -68,9 +74,10 @@ export default function App() {
     }
   }, [session, fetchDossiers, fetchPaiements, fetchFichiers, fetchHistorique]);
 
-  // Show reminders modal on startup if enabled
+  // Show reminders modal ONCE per login session
   useEffect(() => {
-    if (session && showRemindersOnStartup) {
+    if (session && showRemindersOnStartup && !remindersShownRef.current) {
+      remindersShownRef.current = true;
       const timer = setTimeout(() => openRemindersModal(), 800);
       return () => clearTimeout(timer);
     }

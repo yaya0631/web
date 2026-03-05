@@ -8,7 +8,7 @@ import { Checkbox } from '../ui/checkbox';
 import { formatCurrency, formatDate } from '../../lib/formatters';
 import { computeDossierStatus, statusColors, statusLabels } from '../../lib/status';
 import { cn } from '../../lib/utils';
-import { Check, X, Edit2, Copy, DollarSign, FileText, History, Archive, Trash2 } from 'lucide-react';
+import { Check, X, Edit2, Copy, DollarSign, FileText, History, Archive, Trash2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   ContextMenu,
@@ -73,6 +73,11 @@ export function TableRow({ dossier, index, style, totalPaiements }: TableRowProp
   const handleTrash = () => {
     updateDossier(dossier.id, { in_trash: true });
     toast.success('Dossier mis à la corbeille');
+  };
+
+  const handleRestore = () => {
+    updateDossier(dossier.id, { in_trash: false, archived: false, date_archive: null });
+    toast.success('Dossier restauré');
   };
 
   return (
@@ -148,40 +153,42 @@ export function TableRow({ dossier, index, style, totalPaiements }: TableRowProp
           )}
         </div>
       </ContextMenuTrigger>
+
       <ContextMenuContent className="w-64">
         <ContextMenuItem onClick={() => { setSelectedDossierIds([dossier.id]); openDossierModal(); }}>
-          <Edit2 className="mr-2 h-4 w-4" />
-          Modifier
+          <Edit2 className="mr-2 h-4 w-4" />Modifier
           <ContextMenuShortcut>F2</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={handleDuplicate}>
-          <Copy className="mr-2 h-4 w-4" />
-          Dupliquer
+          <Copy className="mr-2 h-4 w-4" />Dupliquer
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => { setSelectedDossierIds([dossier.id]); openPaymentModal(); }}>
-          <DollarSign className="mr-2 h-4 w-4" />
-          Paiements
+          <DollarSign className="mr-2 h-4 w-4" />Paiements
         </ContextMenuItem>
         <ContextMenuItem onClick={() => { setSelectedDossierIds([dossier.id]); openFilesModal(); }}>
-          <FileText className="mr-2 h-4 w-4" />
-          Fichiers
+          <FileText className="mr-2 h-4 w-4" />Fichiers
         </ContextMenuItem>
         <ContextMenuItem onClick={() => { setSelectedDossierIds([dossier.id]); openHistoryModal(); }}>
-          <History className="mr-2 h-4 w-4" />
-          Historique
+          <History className="mr-2 h-4 w-4" />Historique
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={handleArchive}>
-          <Archive className="mr-2 h-4 w-4" />
-          Archiver
-          <ContextMenuShortcut>Ctrl+A</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleTrash} className="text-red-400 focus:text-red-400">
-          <Trash2 className="mr-2 h-4 w-4" />
-          Supprimer
-          <ContextMenuShortcut>Del</ContextMenuShortcut>
-        </ContextMenuItem>
+        {(dossier.in_trash || dossier.archived) ? (
+          <ContextMenuItem onClick={handleRestore} className="text-green-400 focus:text-green-400">
+            <RotateCcw className="mr-2 h-4 w-4" />Restaurer
+          </ContextMenuItem>
+        ) : (
+          <>
+            <ContextMenuItem onClick={handleArchive}>
+              <Archive className="mr-2 h-4 w-4" />Archiver
+              <ContextMenuShortcut>Ctrl+A</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleTrash} className="text-red-400 focus:text-red-400">
+              <Trash2 className="mr-2 h-4 w-4" />Supprimer
+              <ContextMenuShortcut>Del</ContextMenuShortcut>
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );

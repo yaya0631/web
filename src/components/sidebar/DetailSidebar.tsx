@@ -1,4 +1,4 @@
-import { X, FileText, DollarSign, History, MapPin, Phone, Calendar, User, Archive, Trash2 } from 'lucide-react';
+import { X, FileText, DollarSign, History, MapPin, Phone, Calendar, User, Archive, Trash2, RotateCcw } from 'lucide-react';
 import { useDataStore } from '../../store/dataStore';
 import { useModalStore } from '../../store/modalStore';
 import { Button } from '../ui/button';
@@ -6,7 +6,6 @@ import { formatCurrency, formatDate } from '../../lib/formatters';
 import { computeDossierStatus, statusColors, statusLabels } from '../../lib/status';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
-import { useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -46,18 +45,20 @@ export function DetailSidebar() {
     clearSelection();
   };
 
+  const handleRestore = () => {
+    updateDossier(dossier.id, { in_trash: false, archived: false, date_archive: null });
+    toast.success('Dossier restauré');
+  };
+
   const handleGeneratePDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(20);
     doc.setTextColor(30, 41, 59);
     doc.text('Fiche Dossier', 14, 20);
-
     doc.setFontSize(12);
     doc.setTextColor(100, 116, 139);
     doc.text(`Réf: ${dossier.id}`, 14, 30);
 
-    doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
     const info = [
       ['Client', dossier.nom],
       ['Endroit', dossier.endroit || '-'],
@@ -118,11 +119,21 @@ export function DetailSidebar() {
       </div>
 
       <div className="p-4 space-y-5">
-        {/* Status badge */}
-        <div>
+        {/* Status + trash/archive badge */}
+        <div className="flex items-center gap-2 flex-wrap">
           <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold', colorClass)}>
             {statusLabels[status]}
           </span>
+          {dossier.in_trash && (
+            <span className="inline-flex items-center rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-xs text-red-400">
+              Corbeille
+            </span>
+          )}
+          {dossier.archived && !dossier.in_trash && (
+            <span className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-xs text-purple-400">
+              Archivé
+            </span>
+          )}
         </div>
 
         {/* Client Info */}
@@ -172,8 +183,7 @@ export function DetailSidebar() {
             </div>
           </div>
           <Button variant="outline" className="w-full gap-2 text-xs h-8" onClick={openPaymentModal}>
-            <DollarSign className="h-3 w-3" />
-            Gérer les paiements
+            <DollarSign className="h-3 w-3" />Gérer les paiements
           </Button>
         </div>
 
@@ -181,39 +191,45 @@ export function DetailSidebar() {
         <div className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fichiers Joints</h3>
           <Button variant="secondary" className="w-full gap-2 text-xs h-8" onClick={openFilesModal}>
-            <FileText className="h-3 w-3" />
-            Gérer les fichiers
+            <FileText className="h-3 w-3" />Gérer les fichiers
           </Button>
         </div>
 
-        {/* Quick Actions */}
+        {/* Actions */}
         <div className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Actions Rapides</h3>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="secondary" size="sm" className="h-8 text-xs gap-2" onClick={openHistoryModal}>
-              <History className="h-3 w-3" />
-              Historique
+              <History className="h-3 w-3" />Historique
             </Button>
             <Button variant="secondary" size="sm" className="h-8 text-xs gap-2" onClick={handleGeneratePDF}>
-              <FileText className="h-3 w-3" />
-              Générer PDF
+              <FileText className="h-3 w-3" />Générer PDF
             </Button>
-            {!dossier.archived && (
-              <Button variant="secondary" size="sm" className="h-8 text-xs gap-2" onClick={handleArchive}>
-                <Archive className="h-3 w-3" />
-                Archiver
-              </Button>
-            )}
-            {!dossier.in_trash && (
+
+            {/* Restore button for trashed/archived items */}
+            {(dossier.in_trash || dossier.archived) ? (
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-8 text-xs gap-2 text-red-400 hover:text-red-300"
-                onClick={handleTrash}
+                className="h-8 text-xs gap-2 col-span-2 text-green-400 hover:text-green-300"
+                onClick={handleRestore}
               >
-                <Trash2 className="h-3 w-3" />
-                Corbeille
+                <RotateCcw className="h-3 w-3" />Restaurer le dossier
               </Button>
+            ) : (
+              <>
+                <Button variant="secondary" size="sm" className="h-8 text-xs gap-2" onClick={handleArchive}>
+                  <Archive className="h-3 w-3" />Archiver
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 text-xs gap-2 text-red-400 hover:text-red-300"
+                  onClick={handleTrash}
+                >
+                  <Trash2 className="h-3 w-3" />Corbeille
+                </Button>
+              </>
             )}
           </div>
         </div>
